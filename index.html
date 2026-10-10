@@ -1,0 +1,1206 @@
+<!DOCTYPE html>
+<html lang="en" class="h-full bg-slate-950 text-slate-100 selection:bg-emerald-500 selection:text-slate-950">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Apex Enterprise API Engine | FastAPI Interactive Control Center</title>
+    <!-- Tailwind CSS CDN -->
+    <script src="https://cdn.tailwindcss.com"></script>
+    <!-- Chart.js CDN -->
+    <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+    <!-- Google Fonts: Plus Jakarta Sans & JetBrains Mono -->
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=JetBrains+Mono:wght@400;500;600;700&family=Plus+Jakarta+Sans:wght@300;400;500;600;700;800&display=swap" rel="stylesheet">
+
+    <style>
+        body {
+            font-family: 'Plus Jakarta Sans', sans-serif;
+            background-color: #0b1120;
+            background-image: 
+                radial-gradient(at 0% 0%, rgba(16, 185, 129, 0.08) 0px, transparent 50%),
+                radial-gradient(at 100% 0%, rgba(99, 102, 241, 0.12) 0px, transparent 50%),
+                radial-gradient(at 50% 100%, rgba(14, 165, 233, 0.06) 0px, transparent 50%);
+            min-height: 100vh;
+            overflow-x: hidden;
+        }
+
+        code, pre, .font-mono {
+            font-family: 'JetBrains Mono', monospace;
+        }
+
+        /* Glassmorphic Card Styling */
+        .glass-card {
+            background: rgba(15, 23, 42, 0.72);
+            backdrop-filter: blur(20px);
+            -webkit-backdrop-filter: blur(20px);
+            border: 1px solid rgba(255, 255, 255, 0.08);
+            box-shadow: 0 10px 30px -10px rgba(0, 0, 0, 0.5);
+        }
+
+        .glass-card-hover {
+            transition: all 0.25s cubic-bezier(0.4, 0, 0.2, 1);
+        }
+        .glass-card-hover:hover {
+            transform: translateY(-3px);
+            border-color: rgba(16, 185, 129, 0.35);
+            box-shadow: 0 20px 35px -12px rgba(16, 185, 129, 0.18);
+        }
+
+        /* Custom Scrollbar */
+        ::-webkit-scrollbar {
+            width: 6px;
+            height: 6px;
+        }
+        ::-webkit-scrollbar-track {
+            background: rgba(15, 23, 42, 0.6);
+        }
+        ::-webkit-scrollbar-thumb {
+            background: rgba(51, 65, 85, 0.8);
+            border-radius: 9999px;
+        }
+        ::-webkit-scrollbar-thumb:hover {
+            background: rgba(16, 185, 129, 0.6);
+        }
+
+        /* Cursor Canvas Trail */
+        #cursorCanvas {
+            position: fixed;
+            top: 0;
+            left: 0;
+            width: 100vw;
+            height: 100vh;
+            pointer-events: none;
+            z-index: 9999;
+        }
+
+        /* Tab Active Underline */
+        .tab-btn.active {
+            color: #34d399;
+            background: rgba(16, 185, 129, 0.12);
+            border-color: rgba(16, 185, 129, 0.4);
+        }
+
+        /* Pulse glow animation */
+        @keyframes subtlePulse {
+            0%, 100% { opacity: 0.8; }
+            50% { opacity: 0.4; }
+        }
+        .pulse-soft {
+            animation: subtlePulse 2.5s infinite;
+        }
+    </style>
+</head>
+
+<body class="h-full flex flex-col text-slate-100 relative antialiased">
+    <!-- Particle Canvas for fluid cursor effect -->
+    <canvas id="cursorCanvas"></canvas>
+
+    <!-- Toast Notification Container -->
+    <div id="toastContainer" class="fixed top-20 right-6 z-50 flex flex-col gap-3 pointer-events-none max-w-sm w-full"></div>
+
+    <!-- Top Navigation Header -->
+    <header class="bg-slate-900/80 backdrop-blur-xl border-b border-slate-800/80 sticky top-0 z-40">
+        <div class="max-w-7xl mx-auto px-4 sm:px-6 py-3.5 flex flex-wrap items-center justify-between gap-4">
+            
+            <!-- Brand & App Identity -->
+            <div class="flex items-center gap-3">
+                <div class="w-10 h-10 rounded-xl bg-gradient-to-tr from-emerald-500 via-teal-500 to-indigo-500 p-0.5 shadow-lg shadow-emerald-500/20">
+                    <div class="w-full h-full bg-slate-950 rounded-[10px] flex items-center justify-center text-lg select-none">
+                        🏛️
+                    </div>
+                </div>
+                <div>
+                    <div class="flex items-center gap-2">
+                        <h1 class="font-bold text-base sm:text-lg text-white tracking-tight">Apex Enterprise API</h1>
+                        <span class="px-2 py-0.5 text-[10px] font-mono font-semibold bg-emerald-500/20 text-emerald-400 border border-emerald-500/30 rounded-full">v2.0.0</span>
+                    </div>
+                    <p class="text-xs text-slate-400">FastAPI Async Data Engine & Modern SPA</p>
+                </div>
+            </div>
+
+            <!-- Global Status Badges & Quick Controls -->
+            <div class="flex items-center gap-3 text-xs font-semibold flex-wrap">
+                <!-- Live Backend Health Pill -->
+                <div class="flex items-center gap-2 px-3 py-1.5 rounded-xl bg-slate-800/80 border border-slate-700/80 shadow-sm">
+                    <span id="backendPingDot" class="w-2.5 h-2.5 rounded-full bg-emerald-400 animate-pulse"></span>
+                    <span class="text-slate-400">Engine:</span>
+                    <span id="backendStatusText" class="text-emerald-400 font-mono">Checking...</span>
+                </div>
+
+                <!-- Active Card Rail Status Pill -->
+                <div class="flex items-center gap-2 px-3 py-1.5 rounded-xl bg-slate-800/80 border border-slate-700/80 shadow-sm">
+                    <span class="text-slate-400">Card Rail:</span>
+                    <span id="headerCardBadge" class="text-emerald-400 font-bold font-mono">ACTIVE</span>
+                </div>
+
+                <!-- API Docs Swagger Link -->
+                <a href="/docs" target="_blank" class="flex items-center gap-1.5 px-3 py-1.5 rounded-xl bg-indigo-600/20 hover:bg-indigo-600/30 text-indigo-300 border border-indigo-500/30 transition-all font-mono">
+                    <span>⚡ Swagger Docs</span>
+                </a>
+            </div>
+        </div>
+
+        <!-- Tabbed Navigation Bar -->
+        <div class="max-w-7xl mx-auto px-4 sm:px-6 border-t border-slate-800/60 flex items-center gap-2 overflow-x-auto py-2">
+            <button onclick="switchTab('dashboard')" id="tab-btn-dashboard" class="tab-btn active px-3.5 py-1.5 rounded-lg text-xs font-semibold text-slate-300 hover:text-white border border-transparent transition-all flex items-center gap-2 whitespace-nowrap">
+                <span>📊 Dashboard</span>
+            </button>
+            <button onclick="switchTab('sandbox')" id="tab-btn-sandbox" class="tab-btn px-3.5 py-1.5 rounded-lg text-xs font-semibold text-slate-300 hover:text-white border border-transparent transition-all flex items-center gap-2 whitespace-nowrap">
+                <span>⚡ Live Action Sandbox</span>
+            </button>
+            <button onclick="switchTab('explorer')" id="tab-btn-explorer" class="tab-btn px-3.5 py-1.5 rounded-lg text-xs font-semibold text-slate-300 hover:text-white border border-transparent transition-all flex items-center gap-2 whitespace-nowrap">
+                <span>📂 Data Explorer</span>
+            </button>
+            <button onclick="switchTab('telemetry')" id="tab-btn-telemetry" class="tab-btn px-3.5 py-1.5 rounded-lg text-xs font-semibold text-slate-300 hover:text-white border border-transparent transition-all flex items-center gap-2 whitespace-nowrap">
+                <span>📡 Telemetry & Analytics</span>
+            </button>
+
+            <!-- Auto Refresh Toggle on the right -->
+            <div class="ml-auto flex items-center gap-2 pl-4">
+                <button onclick="toggleAutoPolling()" id="autoPollBtn" class="px-2.5 py-1 text-[11px] rounded-lg bg-slate-800 hover:bg-slate-700 text-slate-300 border border-slate-700 font-mono transition-all flex items-center gap-1.5">
+                    <span id="pollIndicator" class="w-1.5 h-1.5 rounded-full bg-emerald-400"></span>
+                    <span>Live Poll: <strong id="pollStateLabel">OFF</strong></span>
+                </button>
+                <button onclick="refreshAll()" class="p-1.5 rounded-lg bg-slate-800 hover:bg-slate-700 text-slate-300 border border-slate-700 transition-all text-xs" title="Refresh Now">
+                    🔄
+                </button>
+            </div>
+        </div>
+    </header>
+
+    <!-- Main App Container -->
+    <main class="flex-1 max-w-7xl w-full mx-auto px-4 sm:px-6 py-6 space-y-6 relative z-10">
+
+        <!-- ============================================================= -->
+        <!-- TAB 1: DASHBOARD -->
+        <!-- ============================================================= -->
+        <section id="tab-content-dashboard" class="space-y-6">
+            
+            <!-- Live Data Top Hero Banner (3-column) -->
+            <div class="grid grid-cols-1 md:grid-cols-3 gap-6">
+                <!-- Card 1: User Profile & Tier -->
+                <div class="glass-card p-6 rounded-2xl glass-card-hover relative overflow-hidden group">
+                    <div class="absolute -top-12 -right-12 w-32 h-32 bg-emerald-500/10 rounded-full blur-2xl group-hover:bg-emerald-500/20 transition-all"></div>
+                    <div class="flex items-center justify-between">
+                        <span class="text-xs text-slate-400 font-bold uppercase tracking-wider">Customer Profile</span>
+                        <span id="uiCustomerTier" class="px-2.5 py-0.5 rounded-full text-[10px] font-bold font-mono bg-emerald-500/20 text-emerald-300 border border-emerald-500/30">Platinum Member</span>
+                    </div>
+                    <div class="text-2xl font-extrabold text-white mt-2" id="uiCustomerName">Loading...</div>
+                    <div class="flex items-center gap-2 mt-2">
+                        <span class="text-xs text-emerald-400 font-mono bg-slate-900/90 px-2 py-0.5 rounded-md border border-slate-800" id="uiUserId">USR-12345</span>
+                        <span class="text-[11px] text-slate-400">Primary Account</span>
+                    </div>
+                </div>
+
+                <!-- Card 2: Balances -->
+                <div class="glass-card p-6 rounded-2xl glass-card-hover relative overflow-hidden group">
+                    <div class="absolute -top-12 -right-12 w-32 h-32 bg-indigo-500/10 rounded-full blur-2xl group-hover:bg-indigo-500/20 transition-all"></div>
+                    <div class="flex items-center justify-between">
+                        <span class="text-xs text-slate-400 font-bold uppercase tracking-wider">Checking Account</span>
+                        <span class="text-[10px] font-mono text-indigo-400 bg-indigo-500/10 px-2 py-0.5 rounded border border-indigo-500/20">Liquid Rail</span>
+                    </div>
+                    <div class="text-3xl font-extrabold text-white mt-2" id="uiCheckingBalance">$0.00</div>
+                    <div class="text-xs text-slate-400 mt-2 flex items-center justify-between border-t border-slate-800/80 pt-2">
+                        <span>Savings Reserve:</span>
+                        <span id="uiSavingsBalance" class="text-slate-200 font-mono font-bold">$0.00</span>
+                    </div>
+                </div>
+
+                <!-- Card 3: Security & Card Status -->
+                <div class="glass-card p-6 rounded-2xl glass-card-hover flex flex-col justify-between relative overflow-hidden group">
+                    <div class="absolute -top-12 -right-12 w-32 h-32 bg-rose-500/10 rounded-full blur-2xl group-hover:bg-rose-500/20 transition-all"></div>
+                    <div>
+                        <div class="flex items-center justify-between">
+                            <span class="text-xs text-slate-400 font-bold uppercase tracking-wider">Payment Rail Security</span>
+                            <span id="cardStatusPill" class="px-2 py-0.5 rounded text-[10px] font-mono font-bold bg-emerald-500/20 text-emerald-400 border border-emerald-500/30">ACTIVE</span>
+                        </div>
+                        <p class="text-xs text-slate-300 mt-2">Execute immediate state freeze/unfreeze via FastAPI POST handler.</p>
+                    </div>
+                    <div class="flex items-center gap-3 mt-4">
+                        <button onclick="triggerCardAction('FREEZE_CARD')" class="flex-1 px-4 py-2 bg-rose-600/80 hover:bg-rose-500 text-white rounded-xl text-xs font-bold transition-all shadow-lg shadow-rose-900/30 active:scale-95 flex items-center justify-center gap-1.5">
+                            <span>🔒 Lock Card</span>
+                        </button>
+                        <button onclick="triggerCardAction('UNFREEZE_CARD')" class="flex-1 px-4 py-2 bg-emerald-600/80 hover:bg-emerald-500 text-white rounded-xl text-xs font-bold transition-all shadow-lg shadow-emerald-900/30 active:scale-95 flex items-center justify-center gap-1.5">
+                            <span>🔓 Unlock Card</span>
+                        </button>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Ledger & Quick Telemetry Preview -->
+            <div class="grid grid-cols-1 lg:grid-cols-3 gap-6">
+                <!-- Left 2 Cols: Transaction Ledger -->
+                <div class="lg:col-span-2 glass-card p-6 rounded-2xl space-y-4">
+                    <div class="flex flex-wrap items-center justify-between gap-3 border-b border-slate-800 pb-3">
+                        <div class="flex items-center gap-2">
+                            <h3 class="font-bold text-base text-white">💳 Transaction Ledger (FastAPI JSON Payload)</h3>
+                        </div>
+                        <div class="flex items-center gap-2">
+                            <select id="txnFilterSelect" onchange="filterTransactions()" class="bg-slate-900 text-slate-300 text-xs px-2.5 py-1 rounded-lg border border-slate-700 focus:outline-none focus:border-emerald-500">
+                                <option value="ALL">All Transactions</option>
+                                <option value="FLAGGED">⚠️ Flagged Only</option>
+                                <option value="NORMAL">Normal Only</option>
+                            </select>
+                            <button onclick="fetchEnterpriseData()" class="px-3 py-1 bg-slate-800 hover:bg-slate-700 text-xs text-slate-300 rounded-lg border border-slate-700 transition-all">🔄 Refresh</button>
+                        </div>
+                    </div>
+
+                    <div class="overflow-x-auto rounded-xl border border-slate-800/80">
+                        <table class="w-full text-left text-xs">
+                            <thead class="bg-slate-900 text-slate-400 font-bold uppercase text-[10px] tracking-wider">
+                                <tr>
+                                    <th class="p-3">TXN ID</th>
+                                    <th class="p-3">Date</th>
+                                    <th class="p-3">Merchant / Category</th>
+                                    <th class="p-3 text-right">Amount</th>
+                                    <th class="p-3 text-center">Risk Assessment</th>
+                                </tr>
+                            </thead>
+                            <tbody id="transactionTable" class="divide-y divide-slate-800 font-mono">
+                                <tr>
+                                    <td colspan="5" class="p-6 text-center text-slate-500">Loading live transaction ledger...</td>
+                                </tr>
+                            </tbody>
+                        </table>
+                    </div>
+                </div>
+
+                <!-- Right 1 Col: Quick Telemetry Snapshot -->
+                <div class="glass-card p-6 rounded-2xl space-y-5 flex flex-col justify-between">
+                    <div>
+                        <div class="flex items-center justify-between border-b border-slate-800 pb-3">
+                            <h3 class="font-bold text-base text-white">📈 Engine Metrics</h3>
+                            <span class="text-[10px] text-emerald-400 font-mono bg-emerald-500/10 px-2 py-0.5 rounded border border-emerald-500/20">LIVE</span>
+                        </div>
+
+                        <div class="mt-4 space-y-4">
+                            <div class="flex items-center justify-between p-3 rounded-xl bg-slate-900/60 border border-slate-800">
+                                <div>
+                                    <div class="text-[10px] font-bold uppercase text-slate-400">Total Requests</div>
+                                    <div class="text-xl font-bold font-mono text-white mt-0.5" id="quickStatRequests">1,420</div>
+                                </div>
+                                <span class="text-2xl">⚡</span>
+                            </div>
+
+                            <div class="flex items-center justify-between p-3 rounded-xl bg-slate-900/60 border border-slate-800">
+                                <div>
+                                    <div class="text-[10px] font-bold uppercase text-slate-400">Average Latency</div>
+                                    <div class="text-xl font-bold font-mono text-emerald-400 mt-0.5" id="quickStatLatency">38.4 ms</div>
+                                </div>
+                                <span class="text-2xl">⏱️</span>
+                            </div>
+
+                            <div class="flex items-center justify-between p-3 rounded-xl bg-slate-900/60 border border-slate-800">
+                                <div>
+                                    <div class="text-[10px] font-bold uppercase text-slate-400">Active Nodes</div>
+                                    <div class="text-xl font-bold font-mono text-indigo-400 mt-0.5" id="quickStatNodes">8 Nodes</div>
+                                </div>
+                                <span class="text-2xl">🖥️</span>
+                            </div>
+
+                            <div class="flex items-center justify-between p-3 rounded-xl bg-slate-900/60 border border-slate-800">
+                                <div>
+                                    <div class="text-[10px] font-bold uppercase text-slate-400">System Uptime</div>
+                                    <div class="text-base font-bold font-mono text-cyan-400 mt-0.5" id="quickStatUptime">0.0 s</div>
+                                </div>
+                                <span class="text-2xl">🛡️</span>
+                            </div>
+                        </div>
+                    </div>
+
+                    <div class="pt-2">
+                        <button onclick="switchTab('telemetry')" class="w-full py-2.5 px-4 rounded-xl bg-gradient-to-r from-emerald-500/20 to-indigo-500/20 hover:from-emerald-500/30 hover:to-indigo-500/30 text-emerald-300 font-semibold text-xs border border-emerald-500/30 transition-all flex items-center justify-center gap-2">
+                            <span>Open Detailed Telemetry & Charts</span>
+                            <span>→</span>
+                        </button>
+                    </div>
+                </div>
+            </div>
+        </section>
+
+        <!-- ============================================================= -->
+        <!-- TAB 2: LIVE ACTION SANDBOX -->
+        <!-- ============================================================= -->
+        <section id="tab-content-sandbox" class="space-y-6 hidden">
+            <div class="grid grid-cols-1 lg:grid-cols-2 gap-6">
+                
+                <!-- Quick Operations Panel -->
+                <div class="glass-card p-6 rounded-2xl space-y-5">
+                    <div class="border-b border-slate-800 pb-3 flex items-center justify-between">
+                        <div>
+                            <h3 class="font-bold text-base text-white">⚡ Preset Action Triggers</h3>
+                            <p class="text-xs text-slate-400">Test pre-configured POST requests against <code class="text-emerald-400">/api/v1/action</code>.</p>
+                        </div>
+                        <span class="text-lg">🧪</span>
+                    </div>
+
+                    <div class="grid grid-cols-1 sm:grid-cols-2 gap-3">
+                        <!-- Freeze/Unfreeze -->
+                        <div class="p-3.5 rounded-xl bg-slate-900/70 border border-slate-800 flex flex-col justify-between space-y-2">
+                            <div>
+                                <div class="text-xs font-bold text-white flex items-center gap-1.5">
+                                    <span>🔒</span> Card Freeze Toggle
+                                </div>
+                                <div class="text-[11px] text-slate-400 mt-1">Changes card state to LOCKED or ACTIVE</div>
+                            </div>
+                            <div class="flex gap-2 pt-1">
+                                <button onclick="triggerCardAction('FREEZE_CARD')" class="flex-1 py-1.5 bg-rose-600/70 hover:bg-rose-500 text-white rounded-lg text-xs font-semibold">Freeze</button>
+                                <button onclick="triggerCardAction('UNFREEZE_CARD')" class="flex-1 py-1.5 bg-emerald-600/70 hover:bg-emerald-500 text-white rounded-lg text-xs font-semibold">Unfreeze</button>
+                            </div>
+                        </div>
+
+                        <!-- Instant Fund Transfer -->
+                        <div class="p-3.5 rounded-xl bg-slate-900/70 border border-slate-800 flex flex-col justify-between space-y-2">
+                            <div>
+                                <div class="text-xs font-bold text-white flex items-center gap-1.5">
+                                    <span>💸</span> Fund Transfer ($250)
+                                </div>
+                                <div class="text-[11px] text-slate-400 mt-1">Move funds between Checking & Savings</div>
+                            </div>
+                            <div class="flex gap-2 pt-1">
+                                <button onclick="triggerAction('TRANSFER_CHECKING_TO_SAVINGS', 250, 'Quick transfer to savings')" class="flex-1 py-1.5 bg-indigo-600/70 hover:bg-indigo-500 text-white rounded-lg text-xs font-semibold">Check → Sav</button>
+                                <button onclick="triggerAction('TRANSFER_SAVINGS_TO_CHECKING', 250, 'Liquidity top-up')" class="flex-1 py-1.5 bg-cyan-600/70 hover:bg-cyan-500 text-white rounded-lg text-xs font-semibold">Sav → Check</button>
+                            </div>
+                        </div>
+
+                        <!-- Simulate High Risk TXN -->
+                        <div class="p-3.5 rounded-xl bg-slate-900/70 border border-slate-800 flex flex-col justify-between space-y-2">
+                            <div>
+                                <div class="text-xs font-bold text-white flex items-center gap-1.5">
+                                    <span>⚠️</span> High-Risk TXN ($850)
+                                </div>
+                                <div class="text-[11px] text-slate-400 mt-1">Triggers autonomous neural risk flag rule</div>
+                            </div>
+                            <button onclick="triggerAction('SIMULATE_TRANSACTION', 850, 'Suspicious Node Terminal #492')" class="w-full py-1.5 bg-amber-600/70 hover:bg-amber-500 text-white rounded-lg text-xs font-semibold">Simulate High Risk</button>
+                        </div>
+
+                        <!-- Simulate Normal TXN -->
+                        <div class="p-3.5 rounded-xl bg-slate-900/70 border border-slate-800 flex flex-col justify-between space-y-2">
+                            <div>
+                                <div class="text-xs font-bold text-white flex items-center gap-1.5">
+                                    <span>☕</span> Normal Purchase ($42.50)
+                                </div>
+                                <div class="text-[11px] text-slate-400 mt-1">Simulates routine approved point-of-sale</div>
+                            </div>
+                            <button onclick="triggerAction('SIMULATE_TRANSACTION', 42.50, 'Blue Bottle Coffee')" class="w-full py-1.5 bg-slate-700 hover:bg-slate-600 text-white rounded-lg text-xs font-semibold">Simulate Purchase</button>
+                        </div>
+                    </div>
+
+                    <!-- Reset & Maintenance -->
+                    <div class="flex items-center gap-3 pt-2">
+                        <button onclick="triggerAction('CLEAR_FLAGGED_TRANSACTIONS', 0, 'Clear risk flags audit')" class="flex-1 py-2 px-3 rounded-xl bg-slate-800 hover:bg-slate-700 text-slate-300 text-xs font-semibold border border-slate-700">
+                            🛡️ Clear Flagged TXNs
+                        </button>
+                        <button onclick="triggerAction('RESET_USER_STATE', 0, 'Factory state demo reset')" class="flex-1 py-2 px-3 rounded-xl bg-slate-800 hover:bg-slate-700 text-rose-300 text-xs font-semibold border border-rose-900/40">
+                            🔄 Reset Demo State
+                        </button>
+                    </div>
+                </div>
+
+                <!-- Custom Payload Dispatcher Form -->
+                <div class="glass-card p-6 rounded-2xl space-y-4">
+                    <div class="border-b border-slate-800 pb-3 flex items-center justify-between">
+                        <div>
+                            <h3 class="font-bold text-base text-white">📝 Custom Payload Dispatcher</h3>
+                            <p class="text-xs text-slate-400">Construct & submit custom Pydantic-validated JSON payloads.</p>
+                        </div>
+                        <span class="text-lg">📡</span>
+                    </div>
+
+                    <form id="customActionForm" onsubmit="handleCustomActionSubmit(event)" class="space-y-3.5">
+                        <div class="grid grid-cols-1 sm:grid-cols-2 gap-3">
+                            <div>
+                                <label class="text-[11px] font-bold text-slate-400 uppercase">Target User ID</label>
+                                <input type="text" id="customUserId" value="USR-12345" required class="w-full mt-1 bg-slate-900 border border-slate-700 rounded-xl px-3 py-2 text-xs font-mono text-emerald-400 focus:outline-none focus:border-emerald-500">
+                            </div>
+                            <div>
+                                <label class="text-[11px] font-bold text-slate-400 uppercase">Action Type</label>
+                                <select id="customActionType" class="w-full mt-1 bg-slate-900 border border-slate-700 rounded-xl px-3 py-2 text-xs font-mono text-white focus:outline-none focus:border-emerald-500">
+                                    <option value="FREEZE_CARD">FREEZE_CARD</option>
+                                    <option value="UNFREEZE_CARD">UNFREEZE_CARD</option>
+                                    <option value="TRANSFER_CHECKING_TO_SAVINGS">TRANSFER_CHECKING_TO_SAVINGS</option>
+                                    <option value="TRANSFER_SAVINGS_TO_CHECKING">TRANSFER_SAVINGS_TO_CHECKING</option>
+                                    <option value="SIMULATE_TRANSACTION">SIMULATE_TRANSACTION</option>
+                                    <option value="CLEAR_FLAGGED_TRANSACTIONS">CLEAR_FLAGGED_TRANSACTIONS</option>
+                                    <option value="RESET_USER_STATE">RESET_USER_STATE</option>
+                                </select>
+                            </div>
+                        </div>
+
+                        <div class="grid grid-cols-1 sm:grid-cols-2 gap-3">
+                            <div>
+                                <label class="text-[11px] font-bold text-slate-400 uppercase">Amount ($)</label>
+                                <input type="number" step="0.01" id="customAmount" placeholder="0.00" class="w-full mt-1 bg-slate-900 border border-slate-700 rounded-xl px-3 py-2 text-xs font-mono text-white focus:outline-none focus:border-emerald-500">
+                            </div>
+                            <div>
+                                <label class="text-[11px] font-bold text-slate-400 uppercase">Reason / Note</label>
+                                <input type="text" id="customReason" value="Console operator dispatch" class="w-full mt-1 bg-slate-900 border border-slate-700 rounded-xl px-3 py-2 text-xs text-white focus:outline-none focus:border-emerald-500">
+                            </div>
+                        </div>
+
+                        <!-- Live Payload Preview Box -->
+                        <div>
+                            <div class="flex items-center justify-between text-[11px] font-bold text-slate-400 uppercase mb-1">
+                                <span>Computed JSON Payload:</span>
+                                <span class="text-[10px] text-slate-500 font-mono">POST /api/v1/action</span>
+                            </div>
+                            <pre id="customPayloadPreview" class="p-2.5 bg-slate-950 rounded-xl border border-slate-800 text-[11px] font-mono text-indigo-300 overflow-x-auto"></pre>
+                        </div>
+
+                        <button type="submit" class="w-full py-2.5 px-4 bg-gradient-to-r from-emerald-600 to-teal-600 hover:from-emerald-500 hover:to-teal-500 text-white font-bold text-xs rounded-xl shadow-lg shadow-emerald-900/30 active:scale-95 transition-all flex items-center justify-center gap-2">
+                            <span>🚀 Dispatch Action Request</span>
+                        </button>
+                    </form>
+                </div>
+            </div>
+        </section>
+
+        <!-- ============================================================= -->
+        <!-- TAB 3: DATA EXPLORER -->
+        <!-- ============================================================= -->
+        <section id="tab-content-explorer" class="space-y-6 hidden">
+            <!-- User Profile Selector & Controls -->
+            <div class="glass-card p-6 rounded-2xl space-y-4">
+                <div class="flex flex-wrap items-center justify-between gap-4 border-b border-slate-800 pb-3">
+                    <div>
+                        <h3 class="font-bold text-base text-white">📂 Enterprise JSON Schema Explorer</h3>
+                        <p class="text-xs text-slate-400">Inspect raw data schemas served via <code class="text-emerald-400">/api/v1/data?user_id=...</code>.</p>
+                    </div>
+                    
+                    <div class="flex items-center gap-3">
+                        <label class="text-xs text-slate-400 font-bold">Select Profile:</label>
+                        <select id="userSelectorDropdown" onchange="switchActiveUser(this.value)" class="bg-slate-900 text-emerald-400 font-mono text-xs px-3 py-1.5 rounded-xl border border-slate-700 focus:outline-none focus:border-emerald-500">
+                            <option value="USR-12345">USR-12345 (Jane Smith)</option>
+                            <option value="USR-67890">USR-67890 (Alex Rivera)</option>
+                            <option value="USR-99001">USR-99001 (Sarah Chen)</option>
+                        </select>
+                        <button onclick="copyRawJson()" class="px-3 py-1.5 bg-slate-800 hover:bg-slate-700 text-xs text-slate-300 rounded-xl border border-slate-700 transition-all flex items-center gap-1.5">
+                            <span>📋 Copy JSON</span>
+                        </button>
+                    </div>
+                </div>
+
+                <!-- Structured breakdown visual cards -->
+                <div class="grid grid-cols-1 md:grid-cols-4 gap-4" id="explorerMetricsCards">
+                    <div class="p-4 rounded-xl bg-slate-900/60 border border-slate-800">
+                        <div class="text-[10px] font-bold text-slate-400 uppercase">Selected Identity</div>
+                        <div class="text-base font-bold text-white mt-1" id="expName">Jane Smith</div>
+                        <div class="text-[11px] text-emerald-400 font-mono mt-0.5" id="expTier">Platinum Member</div>
+                    </div>
+                    <div class="p-4 rounded-xl bg-slate-900/60 border border-slate-800">
+                        <div class="text-[10px] font-bold text-slate-400 uppercase">Card Authorization</div>
+                        <div class="text-base font-bold text-emerald-400 font-mono mt-1" id="expCardStatus">ACTIVE</div>
+                        <div class="text-[11px] text-slate-400 mt-0.5">Contactless & EMV Rail</div>
+                    </div>
+                    <div class="p-4 rounded-xl bg-slate-900/60 border border-slate-800">
+                        <div class="text-[10px] font-bold text-slate-400 uppercase">Cumulative Assets</div>
+                        <div class="text-base font-bold text-white font-mono mt-1" id="expTotalBalance">$19,520.50</div>
+                        <div class="text-[11px] text-slate-400 mt-0.5">Checking + Savings</div>
+                    </div>
+                    <div class="p-4 rounded-xl bg-slate-900/60 border border-slate-800">
+                        <div class="text-[10px] font-bold text-slate-400 uppercase">Recorded Ledger Items</div>
+                        <div class="text-base font-bold text-white font-mono mt-1" id="expTxnCount">5 Items</div>
+                        <div class="text-[11px] text-amber-400 mt-0.5" id="expFlaggedCount">1 Flagged</div>
+                    </div>
+                </div>
+
+                <!-- Raw JSON Tree Viewer -->
+                <div>
+                    <div class="flex items-center justify-between text-xs font-bold text-slate-400 uppercase tracking-wider mb-2">
+                        <span>Structured JSON Data Record</span>
+                        <span class="text-[11px] text-emerald-400 font-mono" id="jsonQueryLatency">Query latency: 0ms</span>
+                    </div>
+                    <pre id="explorerJsonView" class="p-4 bg-slate-950 rounded-2xl border border-slate-800 text-xs font-mono text-emerald-400 overflow-x-auto max-h-96">Loading explorer data...</pre>
+                </div>
+            </div>
+        </section>
+
+        <!-- ============================================================= -->
+        <!-- TAB 4: TELEMETRY & ANALYTICS -->
+        <!-- ============================================================= -->
+        <section id="tab-content-telemetry" class="space-y-6 hidden">
+            <!-- Charts Grid (2 Charts) -->
+            <div class="grid grid-cols-1 lg:grid-cols-2 gap-6">
+                <!-- Chart 1: Latency Benchmark Chart -->
+                <div class="glass-card p-6 rounded-2xl space-y-4">
+                    <div class="flex items-center justify-between border-b border-slate-800 pb-3">
+                        <div>
+                            <h3 class="font-bold text-base text-white">📊 Endpoint Latency Benchmark (ms)</h3>
+                            <p class="text-xs text-slate-400">Response time across FastAPI REST routes.</p>
+                        </div>
+                        <span class="text-xs font-mono text-emerald-400 bg-emerald-500/10 px-2 py-0.5 rounded border border-emerald-500/20">Chart.js</span>
+                    </div>
+                    <div style="position: relative; height: 260px; width: 100%;">
+                        <canvas id="telemetryChart"></canvas>
+                    </div>
+                </div>
+
+                <!-- Chart 2: Resource & Token Distribution -->
+                <div class="glass-card p-6 rounded-2xl space-y-4">
+                    <div class="flex items-center justify-between border-b border-slate-800 pb-3">
+                        <div>
+                            <h3 class="font-bold text-base text-white">🧠 Core System Resource Allocation</h3>
+                            <p class="text-xs text-slate-400">Subsystem load balance and neural pipeline.</p>
+                        </div>
+                        <span class="text-xs font-mono text-indigo-400 bg-indigo-500/10 px-2 py-0.5 rounded border border-indigo-500/20">Distribution</span>
+                    </div>
+                    <div style="position: relative; height: 260px; width: 100%;">
+                        <canvas id="resourceChart"></canvas>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Health & Runtime Diagnostics Table -->
+            <div class="glass-card p-6 rounded-2xl space-y-4">
+                <div class="flex items-center justify-between border-b border-slate-800 pb-3">
+                    <div>
+                        <h3 class="font-bold text-base text-white">🛡️ FastAPI Health & Hardware Telemetry</h3>
+                        <p class="text-xs text-slate-400">Real-time status metrics from <code class="text-emerald-400">/api/v1/health</code> & <code class="text-emerald-400">/api/v1/telemetry</code>.</p>
+                    </div>
+                    <button onclick="fetchTelemetryData()" class="px-3 py-1 bg-slate-800 hover:bg-slate-700 text-xs text-slate-300 rounded-lg border border-slate-700 transition-all">🔄 Sync Telemetry</button>
+                </div>
+
+                <div class="grid grid-cols-2 md:grid-cols-4 gap-4">
+                    <div class="p-3.5 rounded-xl bg-slate-900/60 border border-slate-800">
+                        <div class="text-[10px] text-slate-400 uppercase font-bold">API Engine</div>
+                        <div class="text-sm font-bold text-white font-mono mt-1" id="diagEngine">FastAPI v0.110+</div>
+                    </div>
+                    <div class="p-3.5 rounded-xl bg-slate-900/60 border border-slate-800">
+                        <div class="text-[10px] text-slate-400 uppercase font-bold">Python Runtime</div>
+                        <div class="text-sm font-bold text-emerald-400 font-mono mt-1" id="diagRuntime">3.10+</div>
+                    </div>
+                    <div class="p-3.5 rounded-xl bg-slate-900/60 border border-slate-800">
+                        <div class="text-[10px] text-slate-400 uppercase font-bold">Active Connections</div>
+                        <div class="text-sm font-bold text-indigo-400 font-mono mt-1" id="diagConnections">24</div>
+                    </div>
+                    <div class="p-3.5 rounded-xl bg-slate-900/60 border border-slate-800">
+                        <div class="text-[10px] text-slate-400 uppercase font-bold">System Health</div>
+                        <div class="text-sm font-bold text-emerald-400 font-mono mt-1" id="diagHealth">OPTIMAL</div>
+                    </div>
+                </div>
+            </div>
+        </section>
+
+        <!-- ============================================================= -->
+        <!-- TERMINAL LOG VIEWER (Persistent at bottom) -->
+        <!-- ============================================================= -->
+        <section class="glass-card p-5 rounded-2xl space-y-2">
+            <div class="flex items-center justify-between">
+                <div class="flex items-center gap-2">
+                    <span class="text-xs font-bold text-slate-400 uppercase tracking-wider">🖥️ FastAPI JSON Response Log</span>
+                    <span id="logTimestamp" class="text-[10px] font-mono text-slate-500">Ready</span>
+                </div>
+                <div class="flex items-center gap-2">
+                    <span id="logStatusCode" class="text-[10px] font-mono px-2 py-0.5 rounded bg-emerald-500/20 text-emerald-400 border border-emerald-500/30 font-bold">HTTP 200</span>
+                    <button onclick="clearResponseLog()" class="text-[10px] text-slate-400 hover:text-white px-2 py-0.5 rounded bg-slate-800 border border-slate-700">Clear</button>
+                </div>
+            </div>
+            <pre id="jsonResponseLog" class="p-3 bg-slate-950 rounded-xl border border-slate-800 text-[11px] font-mono text-emerald-400 overflow-x-auto max-h-44 transition-all">{ "status": "Ready to receive requests from FastAPI backend..." }</pre>
+        </section>
+
+    </main>
+
+    <!-- Footer -->
+    <footer class="border-t border-slate-800/80 py-4 text-center text-xs text-slate-500 relative z-10">
+        <div class="max-w-7xl mx-auto px-4 flex flex-wrap items-center justify-between gap-2">
+            <div>Apex Enterprise API Engine &copy; 2026. Built with FastAPI & Modern UI.</div>
+            <div class="font-mono text-[11px] text-slate-400">Endpoint Base: <code class="text-emerald-400">/api/v1</code></div>
+        </div>
+    </footer>
+
+    <!-- ============================================================= -->
+    <!-- JAVASCRIPT APPLICATION LOGIC -->
+    <!-- ============================================================= -->
+    <script>
+        // Use relative path if served directly via FastAPI, fallback to localhost:8000
+        const API_BASE = window.location.origin.includes('8000') || window.location.protocol === 'file:' 
+            ? "http://localhost:8000/api/v1" 
+            : "/api/v1";
+
+        let currentActiveUser = "USR-12345";
+        let cachedUserData = null;
+        let latencyChartInstance = null;
+        let resourceChartInstance = null;
+        let isAutoPolling = false;
+        let pollTimer = null;
+
+        // -------------------------------------------------------------
+        // Toast Notifications
+        // -------------------------------------------------------------
+        function showToast(message, type = 'success') {
+            const container = document.getElementById('toastContainer');
+            const toast = document.createElement('div');
+            
+            let bg = 'bg-slate-900/90 border-emerald-500/40 text-emerald-300';
+            let icon = '✅';
+            if (type === 'error') {
+                bg = 'bg-slate-900/90 border-rose-500/40 text-rose-300';
+                icon = '❌';
+            } else if (type === 'warning') {
+                bg = 'bg-slate-900/90 border-amber-500/40 text-amber-300';
+                icon = '⚠️';
+            } else if (type === 'info') {
+                bg = 'bg-slate-900/90 border-indigo-500/40 text-indigo-300';
+                icon = 'ℹ️';
+            }
+
+            toast.className = `p-3.5 rounded-xl border backdrop-blur-xl shadow-2xl flex items-center gap-3 text-xs font-semibold transform transition-all duration-300 translate-x-full pointer-events-auto ${bg}`;
+            toast.innerHTML = `
+                <span class="text-base">${icon}</span>
+                <span class="flex-1">${message}</span>
+                <button onclick="this.parentElement.remove()" class="text-slate-400 hover:text-white text-xs">✕</button>
+            `;
+
+            container.appendChild(toast);
+            requestAnimationFrame(() => {
+                toast.classList.remove('translate-x-full');
+            });
+
+            setTimeout(() => {
+                toast.classList.add('opacity-0', 'translate-x-full');
+                setTimeout(() => toast.remove(), 350);
+            }, 3500);
+        }
+
+        // -------------------------------------------------------------
+        // Terminal Logger Helper
+        // -------------------------------------------------------------
+        function updateTerminalLog(data, statusCode = 200) {
+            const logBox = document.getElementById('jsonResponseLog');
+            const timeSpan = document.getElementById('logTimestamp');
+            const statusSpan = document.getElementById('logStatusCode');
+
+            logBox.innerText = JSON.stringify(data, null, 2);
+            timeSpan.innerText = new Date().toLocaleTimeString();
+            statusSpan.innerText = `HTTP ${statusCode}`;
+            
+            if (statusCode >= 200 && statusCode < 300) {
+                statusSpan.className = "text-[10px] font-mono px-2 py-0.5 rounded bg-emerald-500/20 text-emerald-400 border border-emerald-500/30 font-bold";
+                logBox.className = "p-3 bg-slate-950 rounded-xl border border-slate-800 text-[11px] font-mono text-emerald-400 overflow-x-auto max-h-44";
+            } else {
+                statusSpan.className = "text-[10px] font-mono px-2 py-0.5 rounded bg-rose-500/20 text-rose-400 border border-rose-500/30 font-bold";
+                logBox.className = "p-3 bg-slate-950 rounded-xl border border-rose-900/50 text-[11px] font-mono text-rose-400 overflow-x-auto max-h-44";
+            }
+        }
+
+        function clearResponseLog() {
+            document.getElementById('jsonResponseLog').innerText = '{ "status": "Log cleared." }';
+            document.getElementById('logStatusCode').innerText = 'IDLE';
+        }
+
+        // -------------------------------------------------------------
+        // Tab Navigation
+        // -------------------------------------------------------------
+        function switchTab(tabId) {
+            const tabs = ['dashboard', 'sandbox', 'explorer', 'telemetry'];
+            tabs.forEach(t => {
+                const btn = document.getElementById(`tab-btn-${t}`);
+                const content = document.getElementById(`tab-content-${t}`);
+                if (btn && content) {
+                    if (t === tabId) {
+                        btn.classList.add('active');
+                        content.classList.remove('hidden');
+                    } else {
+                        btn.classList.remove('active');
+                        content.classList.add('hidden');
+                    }
+                }
+            });
+
+            if (tabId === 'telemetry') {
+                setTimeout(() => {
+                    if (latencyChartInstance) latencyChartInstance.resize();
+                    if (resourceChartInstance) resourceChartInstance.resize();
+                }, 50);
+            }
+        }
+
+        // -------------------------------------------------------------
+        // Backend Health Check
+        // -------------------------------------------------------------
+        async function checkBackendHealth() {
+            try {
+                const res = await fetch(`${API_BASE}/health`);
+                if (!res.ok) throw new Error(`HTTP ${res.status}`);
+                const data = await res.json();
+                
+                const pingDot = document.getElementById('backendPingDot');
+                const statusText = document.getElementById('backendStatusText');
+
+                pingDot.className = "w-2.5 h-2.5 rounded-full bg-emerald-400 animate-pulse";
+                statusText.className = "text-emerald-400 font-mono";
+                statusText.innerText = `${data.status} (${data.engine})`;
+
+                const diagEngine = document.getElementById('diagEngine');
+                const diagRuntime = document.getElementById('diagRuntime');
+                if (diagEngine) diagEngine.innerText = data.engine;
+                if (diagRuntime) diagRuntime.innerText = data.python_runtime;
+
+                return true;
+            } catch (err) {
+                const pingDot = document.getElementById('backendPingDot');
+                const statusText = document.getElementById('backendStatusText');
+                pingDot.className = "w-2.5 h-2.5 rounded-full bg-rose-500";
+                statusText.className = "text-rose-400 font-mono";
+                statusText.innerText = "OFFLINE (Start main.py)";
+                return false;
+            }
+        }
+
+        // -------------------------------------------------------------
+        // Fetch User Data from FastAPI
+        // -------------------------------------------------------------
+        async function fetchEnterpriseData(targetUserId = currentActiveUser) {
+            try {
+                const res = await fetch(`${API_BASE}/data?user_id=${targetUserId}`);
+                const result = await res.json();
+
+                updateTerminalLog(result, res.status);
+
+                if (res.ok && result.status === "SUCCESS") {
+                    cachedUserData = result.data;
+                    currentActiveUser = targetUserId;
+                    renderUserData(result.data, targetUserId);
+                } else {
+                    showToast(result.detail || "Failed to load user record.", "error");
+                }
+            } catch (err) {
+                console.error("Error fetching data:", err);
+                showToast("Could not connect to FastAPI endpoint.", "error");
+            }
+        }
+
+        // Render User Data in UI
+        function renderUserData(user, userId) {
+            // Dashboard Elements
+            document.getElementById('uiCustomerName').innerText = user.name;
+            document.getElementById('uiUserId').innerText = userId;
+            document.getElementById('uiCustomerTier').innerText = user.tier;
+            document.getElementById('uiCheckingBalance').innerText = '$' + user.account_balances.checking.toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 });
+            document.getElementById('uiSavingsBalance').innerText = '$' + user.account_balances.savings.toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 });
+
+            // Badges
+            const isCardActive = user.card_status === 'ACTIVE';
+            const headerBadge = document.getElementById('headerCardBadge');
+            const cardPill = document.getElementById('cardStatusPill');
+
+            [headerBadge, cardPill].forEach(b => {
+                if (!b) return;
+                b.innerText = user.card_status;
+                b.className = isCardActive 
+                    ? 'text-emerald-400 font-bold font-mono px-2 py-0.5 rounded bg-emerald-500/20 border border-emerald-500/30' 
+                    : 'text-rose-400 font-bold font-mono px-2 py-0.5 rounded bg-rose-500/20 border border-rose-500/30';
+            });
+
+            // Populate Transactions Table
+            renderTransactionTable(user.recent_transactions);
+
+            // Populate Explorer Data
+            renderExplorer(user, userId);
+            updateCustomFormPreview();
+        }
+
+        // Render Transaction Table with filtering
+        function renderTransactionTable(transactions) {
+            const tbody = document.getElementById('transactionTable');
+            const filter = document.getElementById('txnFilterSelect').value;
+            tbody.innerHTML = '';
+
+            let filtered = transactions;
+            if (filter === 'FLAGGED') {
+                filtered = transactions.filter(t => t.flagged);
+            } else if (filter === 'NORMAL') {
+                filtered = transactions.filter(t => !t.flagged);
+            }
+
+            if (filtered.length === 0) {
+                tbody.innerHTML = `<tr><td colspan="5" class="p-6 text-center text-slate-500">No transactions match the selected filter.</td></tr>`;
+                return;
+            }
+
+            filtered.forEach(txn => {
+                const tr = document.createElement('tr');
+                tr.className = txn.flagged 
+                    ? 'bg-amber-950/20 hover:bg-amber-950/30 transition-colors' 
+                    : 'hover:bg-slate-900/60 transition-colors';
+
+                tr.innerHTML = `
+                    <td class="p-3 text-slate-300 font-semibold">${txn.id}</td>
+                    <td class="p-3 text-slate-400 text-[11px]">${txn.date}</td>
+                    <td class="p-3 text-slate-100 font-sans">
+                        <div class="font-medium">${txn.merchant}</div>
+                        <div class="text-[10px] text-slate-500 font-mono">${txn.category || 'Standard'}</div>
+                    </td>
+                    <td class="p-3 text-right font-bold text-white font-mono">$${txn.amount.toFixed(2)}</td>
+                    <td class="p-3 text-center">
+                        ${txn.flagged 
+                            ? '<span class="inline-flex items-center gap-1 px-2 py-0.5 rounded-full text-[10px] font-bold bg-amber-500/20 text-amber-300 border border-amber-500/30 font-sans">⚠️ Flagged Risk</span>' 
+                            : '<span class="inline-flex items-center gap-1 px-2 py-0.5 rounded-full text-[10px] font-medium bg-slate-800 text-slate-400 font-sans">Normal</span>'}
+                    </td>
+                `;
+                tbody.appendChild(tr);
+            });
+        }
+
+        function filterTransactions() {
+            if (cachedUserData && cachedUserData.recent_transactions) {
+                renderTransactionTable(cachedUserData.recent_transactions);
+            }
+        }
+
+        // Render Data Explorer view
+        function renderExplorer(user, userId) {
+            document.getElementById('expName').innerText = user.name;
+            document.getElementById('expTier').innerText = user.tier;
+            document.getElementById('expCardStatus').innerText = user.card_status;
+            document.getElementById('expCardStatus').className = user.card_status === 'ACTIVE' ? 'text-base font-bold text-emerald-400 font-mono mt-1' : 'text-base font-bold text-rose-400 font-mono mt-1';
+            
+            const total = user.account_balances.checking + user.account_balances.savings;
+            document.getElementById('expTotalBalance').innerText = '$' + total.toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 });
+            document.getElementById('expTxnCount').innerText = `${user.recent_transactions.length} Items`;
+            
+            const flaggedCount = user.recent_transactions.filter(t => t.flagged).length;
+            document.getElementById('expFlaggedCount').innerText = `${flaggedCount} Flagged`;
+
+            document.getElementById('explorerJsonView').innerText = JSON.stringify({
+                user_id: userId,
+                profile: user
+            }, null, 2);
+
+            const userDropdown = document.getElementById('userSelectorDropdown');
+            if (userDropdown && userDropdown.value !== userId) {
+                userDropdown.value = userId;
+            }
+        }
+
+        function switchActiveUser(userId) {
+            currentActiveUser = userId;
+            document.getElementById('customUserId').value = userId;
+            fetchEnterpriseData(userId);
+            showToast(`Switched active profile to ${userId}`, 'info');
+        }
+
+        function copyRawJson() {
+            const raw = document.getElementById('explorerJsonView').innerText;
+            navigator.clipboard.writeText(raw).then(() => {
+                showToast("JSON payload copied to clipboard!", "success");
+            }).catch(() => {
+                showToast("Failed to copy JSON to clipboard.", "error");
+            });
+        }
+
+        // -------------------------------------------------------------
+        // POST Action Execution
+        // -------------------------------------------------------------
+        async function triggerCardAction(actionType) {
+            await triggerAction(actionType, 0, `User requested ${actionType} via control panel`);
+        }
+
+        async function triggerAction(actionType, amount = 0, reason = "") {
+            try {
+                const payload = {
+                    user_id: currentActiveUser,
+                    action_type: actionType,
+                    reason: reason || "User action initiated via console",
+                    amount: parseFloat(amount) || 0.0
+                };
+
+                const res = await fetch(`${API_BASE}/action`, {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify(payload)
+                });
+
+                const data = await res.json();
+                updateTerminalLog(data, res.status);
+
+                if (res.ok && data.success) {
+                    showToast(data.message, "success");
+                    // Refresh data and telemetry
+                    fetchEnterpriseData(currentActiveUser);
+                    fetchTelemetryData();
+                } else {
+                    showToast(data.detail || "Action processing failed.", "error");
+                }
+            } catch (err) {
+                console.error("Action error:", err);
+                showToast("Could not send action to backend.", "error");
+            }
+        }
+
+        // Custom Payload Submit
+        function updateCustomFormPreview() {
+            const payload = {
+                user_id: document.getElementById('customUserId').value || currentActiveUser,
+                action_type: document.getElementById('customActionType').value,
+                amount: parseFloat(document.getElementById('customAmount').value) || 0.0,
+                reason: document.getElementById('customReason').value
+            };
+            const preview = document.getElementById('customPayloadPreview');
+            if (preview) {
+                preview.innerText = JSON.stringify(payload, null, 2);
+            }
+        }
+
+        async function handleCustomActionSubmit(e) {
+            e.preventDefault();
+            const userId = document.getElementById('customUserId').value;
+            const actionType = document.getElementById('customActionType').value;
+            const amount = parseFloat(document.getElementById('customAmount').value) || 0.0;
+            const reason = document.getElementById('customReason').value;
+
+            currentActiveUser = userId;
+            await triggerAction(actionType, amount, reason);
+        }
+
+        // -------------------------------------------------------------
+        // Telemetry & Real-Time Analytics
+        // -------------------------------------------------------------
+        async function fetchTelemetryData() {
+            try {
+                const res = await fetch(`${API_BASE}/telemetry`);
+                if (!res.ok) return;
+                const data = await res.json();
+
+                // Update quick stats
+                document.getElementById('quickStatRequests').innerText = data.total_requests.toLocaleString();
+                document.getElementById('quickStatLatency').innerText = `${data.avg_latency_ms.toFixed(1)} ms`;
+                document.getElementById('quickStatNodes').innerText = `${data.active_connections} Conns`;
+                document.getElementById('quickStatUptime').innerText = `${data.uptime_seconds.toFixed(0)}s`;
+
+                // Update Telemetry Diagnostics
+                const diagConn = document.getElementById('diagConnections');
+                const diagHealth = document.getElementById('diagHealth');
+                if (diagConn) diagConn.innerText = data.active_connections;
+                if (diagHealth) diagHealth.innerText = data.system_health;
+
+                // Update Charts
+                if (latencyChartInstance && data.route_latencies) {
+                    latencyChartInstance.data.labels = Object.keys(data.route_latencies);
+                    latencyChartInstance.data.datasets[0].data = Object.values(data.route_latencies);
+                    latencyChartInstance.update();
+                }
+
+                if (resourceChartInstance && data.resource_distribution) {
+                    resourceChartInstance.data.labels = Object.keys(data.resource_distribution);
+                    resourceChartInstance.data.datasets[0].data = Object.values(data.resource_distribution);
+                    resourceChartInstance.update();
+                }
+            } catch (err) {
+                console.error("Telemetry fetch error:", err);
+            }
+        }
+
+        // -------------------------------------------------------------
+        // Chart.js Initialization
+        // -------------------------------------------------------------
+        function initCharts() {
+            // Chart 1: Latency Bar Chart
+            const ctx1 = document.getElementById('telemetryChart').getContext('2d');
+            latencyChartInstance = new Chart(ctx1, {
+                type: 'bar',
+                data: {
+                    labels: ['/health', '/data', '/action', '/telemetry'],
+                    datasets: [{
+                        label: 'Latency (ms)',
+                        data: [8.4, 28.6, 42.1, 18.2],
+                        backgroundColor: [
+                            'rgba(16, 185, 129, 0.85)',
+                            'rgba(99, 102, 241, 0.85)',
+                            'rgba(245, 158, 11, 0.85)',
+                            'rgba(6, 182, 212, 0.85)'
+                        ],
+                        borderColor: [
+                            '#10b981',
+                            '#6366f1',
+                            '#f59e0b',
+                            '#06b6d4'
+                        ],
+                        borderWidth: 1.5,
+                        borderRadius: 8
+                    }]
+                },
+                options: {
+                    maintainAspectRatio: false,
+                    responsive: true,
+                    plugins: {
+                        legend: { display: false },
+                        tooltip: {
+                            callbacks: {
+                                label: ctx => `Latency: ${ctx.raw} ms`
+                            }
+                        }
+                    },
+                    scales: {
+                        y: {
+                            beginAtZero: true,
+                            grid: { color: 'rgba(255, 255, 255, 0.06)' },
+                            ticks: { color: '#94a3b8', font: { family: 'JetBrains Mono' } }
+                        },
+                        x: {
+                            grid: { display: false },
+                            ticks: { color: '#94a3b8', font: { family: 'JetBrains Mono' } }
+                        }
+                    }
+                }
+            });
+
+            // Chart 2: Resource Allocation Doughnut Chart
+            const ctx2 = document.getElementById('resourceChart').getContext('2d');
+            resourceChartInstance = new Chart(ctx2, {
+                type: 'doughnut',
+                data: {
+                    labels: ['Core Compute', 'Neural Risk', 'Cache Layer', 'Network Gateways'],
+                    datasets: [{
+                        data: [35, 28, 22, 15],
+                        backgroundColor: [
+                            '#10b981',
+                            '#6366f1',
+                            '#06b6d4',
+                            '#f43f5e'
+                        ],
+                        borderColor: '#0f172a',
+                        borderWidth: 3
+                    }]
+                },
+                options: {
+                    maintainAspectRatio: false,
+                    responsive: true,
+                    plugins: {
+                        legend: {
+                            position: 'bottom',
+                            labels: {
+                                color: '#94a3b8',
+                                font: { family: 'Plus Jakarta Sans', size: 11 },
+                                boxWidth: 12,
+                                padding: 12
+                            }
+                        }
+                    },
+                    cutout: '70%'
+                }
+            });
+        }
+
+        // -------------------------------------------------------------
+        // Auto Polling
+        // -------------------------------------------------------------
+        function toggleAutoPolling() {
+            isAutoPolling = !isAutoPolling;
+            const label = document.getElementById('pollStateLabel');
+            const ind = document.getElementById('pollIndicator');
+
+            if (isAutoPolling) {
+                label.innerText = "ON (3s)";
+                ind.className = "w-1.5 h-1.5 rounded-full bg-emerald-400 animate-pulse";
+                pollTimer = setInterval(() => {
+                    checkBackendHealth();
+                    fetchEnterpriseData(currentActiveUser);
+                    fetchTelemetryData();
+                }, 3000);
+                showToast("Live polling enabled (3s sync).", "info");
+            } else {
+                label.innerText = "OFF";
+                ind.className = "w-1.5 h-1.5 rounded-full bg-slate-500";
+                if (pollTimer) clearInterval(pollTimer);
+                showToast("Live polling paused.", "info");
+            }
+        }
+
+        function refreshAll() {
+            checkBackendHealth();
+            fetchEnterpriseData(currentActiveUser);
+            fetchTelemetryData();
+            showToast("Data refreshed.", "success");
+        }
+
+        // -------------------------------------------------------------
+        // Particle Trail Cursor Effect
+        // -------------------------------------------------------------
+        (function initFluidParticles() {
+            const canvas = document.getElementById('cursorCanvas');
+            const ctx = canvas.getContext('2d');
+            let width = canvas.width = window.innerWidth;
+            let height = canvas.height = window.innerHeight;
+
+            window.addEventListener('resize', () => {
+                width = canvas.width = window.innerWidth;
+                height = canvas.height = window.innerHeight;
+            });
+
+            const particles = [];
+            let mouse = { x: width / 2, y: height / 2 };
+
+            window.addEventListener('mousemove', e => {
+                mouse.x = e.clientX;
+                mouse.y = e.clientY;
+                // Add particles on mouse movement
+                for (let i = 0; i < 2; i++) {
+                    particles.push({
+                        x: mouse.x + (Math.random() - 0.5) * 10,
+                        y: mouse.y + (Math.random() - 0.5) * 10,
+                        size: Math.random() * 3 + 1,
+                        alpha: 0.6,
+                        vx: (Math.random() - 0.5) * 1.2,
+                        vy: (Math.random() - 0.5) * 1.2 - 0.5,
+                        color: Math.random() > 0.5 ? '16, 185, 129' : '99, 102, 241'
+                    });
+                }
+            });
+
+            function render() {
+                ctx.clearRect(0, 0, width, height);
+
+                // Radial ambient follow glow
+                const ambient = ctx.createRadialGradient(mouse.x, mouse.y, 0, mouse.x, mouse.y, 90);
+                ambient.addColorStop(0, 'rgba(16, 185, 129, 0.08)');
+                ambient.addColorStop(1, 'rgba(0, 0, 0, 0)');
+                ctx.fillStyle = ambient;
+                ctx.beginPath();
+                ctx.arc(mouse.x, mouse.y, 90, 0, Math.PI * 2);
+                ctx.fill();
+
+                // Particle update & draw
+                for (let i = particles.length - 1; i >= 0; i--) {
+                    const p = particles[i];
+                    p.x += p.vx;
+                    p.y += p.vy;
+                    p.alpha -= 0.015;
+                    p.size *= 0.98;
+
+                    if (p.alpha <= 0) {
+                        particles.splice(i, 1);
+                        continue;
+                    }
+
+                    ctx.fillStyle = `rgba(${p.color}, ${p.alpha})`;
+                    ctx.beginPath();
+                    ctx.arc(p.x, p.y, p.size, 0, Math.PI * 2);
+                    ctx.fill();
+                }
+
+                requestAnimationFrame(render);
+            }
+            render();
+        })();
+
+        // -------------------------------------------------------------
+        // On Initial Page Load
+        // -------------------------------------------------------------
+        window.addEventListener('DOMContentLoaded', () => {
+            initCharts();
+            checkBackendHealth();
+            fetchEnterpriseData(currentActiveUser);
+            fetchTelemetryData();
+
+            // Set up form listeners for preview
+            ['customUserId', 'customActionType', 'customAmount', 'customReason'].forEach(id => {
+                const el = document.getElementById(id);
+                if (el) el.addEventListener('input', updateCustomFormPreview);
+            });
+            updateCustomFormPreview();
+        });
+    </script>
+</body>
+</html>
